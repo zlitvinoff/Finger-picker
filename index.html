@@ -167,7 +167,7 @@ margin-top: 8px;
 
 #seq-count {
 position: absolute;
-top: 20px;
+bottom: 120px;
 left: 50%;
 transform: translateX(-50%);
 font-family: ‘Bebas Neue’, sans-serif;
@@ -447,11 +447,13 @@ var dismissTimer   = null;
 var inactRaf       = null;
 var inactStart     = null;
 var registerTimer  = null;
+var addedTimer     = null;
 
-var COUNTDOWN_MS  = 3000;
+var COUNTDOWN_MS  = 2000;
 var DISMISS_MS    = 10000;
 var REGISTER_MS   = 2000;
 var INACTIVITY_MS = 3000;
+var ADDED_DELAY   = 1500;
 
 var teamsMode = false;
 var sortMode  = false;
@@ -581,7 +583,7 @@ function startInactivityRing(ms, onComplete) {
   var rect = arena.getBoundingClientRect();
   inactRing.style.display = 'block';
   inactRing.style.left = (rect.width/2 - 60) + 'px';
-  inactRing.style.top  = (rect.height/2 - 60) + 'px';
+  inactRing.style.top  = (rect.height/2 - 60 - 80) + 'px';
   inactProg.style.strokeDashoffset = '0';
   inactStart = performance.now();
   function tick(now) {
@@ -831,8 +833,10 @@ function resetAll() {
   stopInactivityRing();
   if (countdownTimer) cancelAnimationFrame(countdownTimer);
   if (registerTimer)  clearTimeout(registerTimer);
+  if (addedTimer)     clearTimeout(addedTimer);
   countdownTimer = null;
   registerTimer  = null;
+  addedTimer     = null;
   state          = 'waiting';
   nextColorIndex = 0;
   seqPlayers     = [];
@@ -868,21 +872,36 @@ arena.addEventListener('touchstart', function(e) {
   if (seqMode) {
     stopInactivityRing();
     if (registerTimer) { clearTimeout(registerTimer); registerTimer = null; }
+    // Reset the 1.5s "Added" debounce timer on every new finger
+    if (addedTimer) { clearTimeout(addedTimer); addedTimer = null; }
     hideAdded();
     for (var i = 0; i < ch.length; i++) {
-      // Each new touch gets next unique color
       var colorIdx = (seqPlayers.length + getTouchCount()) % ALL_COLORS.length;
       createBlob(ch[i].identifier, ch[i].clientX - rect.left, ch[i].clientY - rect.top, colorIdx);
     }
     state = 'seq-active';
     setPrompt('', '', false);
+    // Show "Added!" only after 1.5s of no new fingers arriving
+    addedTimer = setTimeout(function() {
+      addedTimer = null;
+      if (state === 'seq-active') showAdded();
+    }, ADDED_DELAY);
   } else {
     for (var i = 0; i < ch.length; i++) {
       createBlob(ch[i].identifier, ch[i].clientX - rect.left, ch[i].clientY - rect.top, nextColorIndex % ALL_COLORS.length);
       nextColorIndex++;
     }
     updateSimPrompt();
-    if (getTouchCount() >= 2 && state === 'waiting') startCountdown();
+    if (getTouchCount() >= 2) {
+      // Always restart countdown on each new finger
+      if (state === 'countdown') {
+        cancelAnimationFrame(countdownTimer);
+        countdownTimer = null;
+        ring.style.display = 'none';
+        state = 'waiting';
+      }
+      startCountdown();
+    }
   }
 }, { passive: false });
 
@@ -916,20 +935,32 @@ arena.addEventListener('touchend', function(e) {
       removeBlob(id);
     }
     updateSeqCount();
-    if (getTouchCount() === 0 && state !== 'seq-waiting') {
-      state = 'seq-waiting';
-      showAdded();
-      registerTimer = setTimeout(function() {
-        registerTimer = null;
-        hideAdded();
-        clearLiveTouches();
-        setPrompt('Any more?', seqPlayers.length + ' registered  \u2014  tap to add', true);
-        updateSeqCount();
+
+    if (getTouchCount() === 0) {
+      if (state === 'seq-active') {
+        // First lift after tapping: start register timer, Added is already showing
+        state = 'seq-waiting';
+        registerTimer = setTimeout(function() {
+          registerTimer = null;
+          hideAdded();
+          clearLiveTouches();
+          var n = seqPlayers.length;
+          setPrompt('Any more?', n + ' registered  \u2014  tap to add', true);
+          updateSeqCount();
+          state = 'seq-idle';
+          // Start inactivity ring now - no more taps = show result
+          startInactivityRing(INACTIVITY_MS, function() {
+            if (seqPlayers.length >= 1) showSeqResult();
+            else resetAll();
+          });
+        }, REGISTER_MS);
+      } else if (state === 'seq-idle') {
+        // Subsequent round lifted - restart inactivity ring
         startInactivityRing(INACTIVITY_MS, function() {
           if (seqPlayers.length >= 1) showSeqResult();
           else resetAll();
         });
-      }, REGISTER_MS);
+      }
     }
   } else {
     for (var i = 0; i < ch.length; i++) removeBlob(ch[i].identifier);
