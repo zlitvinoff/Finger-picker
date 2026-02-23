@@ -1,1 +1,775 @@
-test
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Who Goes First</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+- { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+–bg: #0a0a0f;
+–surface: #13131a;
+–accent: #ff4d00;
+–gold: #ffc340;
+–text: #f0ede8;
+–muted: #555568;
+}
+
+body {
+background: var(–bg);
+color: var(–text);
+font-family: ‘DM Sans’, sans-serif;
+height: 100dvh;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+user-select: none;
+-webkit-user-select: none;
+}
+
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background-image: url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 256 256’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘noise’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.9’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23noise)’ opacity=‘0.04’/%3E%3C/svg%3E”);
+pointer-events: none;
+z-index: 100;
+opacity: 0.6;
+}
+
+#header {
+padding: 16px 20px 8px;
+display: flex;
+align-items: center;
+gap: 8px;
+flex-shrink: 0;
+}
+
+h1 {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.8rem;
+letter-spacing: 0.08em;
+color: var(–text);
+margin-right: auto;
+}
+
+.pill-btn {
+background: var(–surface);
+border: 1px solid #2a2a38;
+color: var(–muted);
+font-family: ‘DM Sans’, sans-serif;
+font-size: 0.72rem;
+font-weight: 500;
+letter-spacing: 0.06em;
+text-transform: uppercase;
+padding: 6px 13px;
+border-radius: 20px;
+cursor: pointer;
+transition: all 0.2s;
+white-space: nowrap;
+}
+.pill-btn:hover { color: var(–text); border-color: #444; }
+.pill-btn.active {
+background: #1e1020;
+border-color: var(–accent);
+color: var(–accent);
+}
+
+#sub-config {
+padding: 0 20px;
+display: flex;
+gap: 12px;
+align-items: center;
+flex-shrink: 0;
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.3s ease, padding 0.3s ease;
+}
+#sub-config.visible { max-height: 50px; padding-bottom: 8px; }
+#sub-config label { font-size: 0.78rem; color: var(–muted); text-transform: uppercase; letter-spacing: 0.06em; }
+#team-count-input {
+background: var(–surface);
+border: 1px solid #2a2a38;
+color: var(–text);
+font-family: ‘DM Sans’, sans-serif;
+font-size: 0.85rem;
+padding: 5px 10px;
+border-radius: 8px;
+width: 50px;
+text-align: center;
+}
+
+#arena {
+flex: 1;
+position: relative;
+display: flex;
+align-items: center;
+justify-content: center;
+overflow: hidden;
+}
+
+#arena::before {
+content: ‘’;
+position: absolute;
+width: 60vmin;
+height: 60vmin;
+border-radius: 50%;
+background: radial-gradient(circle, rgba(255,77,0,0.06) 0%, transparent 70%);
+pointer-events: none;
+}
+
+#prompt {
+position: absolute;
+text-align: center;
+pointer-events: none;
+transition: opacity 0.3s;
+padding: 20px;
+}
+#prompt-main {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: clamp(2.2rem, 9vmin, 4.5rem);
+letter-spacing: 0.05em;
+line-height: 1;
+color: var(–muted);
+}
+#prompt-sub {
+font-size: 0.78rem;
+color: #333348;
+text-transform: uppercase;
+letter-spacing: 0.12em;
+margin-top: 8px;
+}
+
+.touch-blob {
+position: absolute;
+transform: translate(-50%, -50%) scale(0);
+width: 84px;
+height: 84px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1rem;
+letter-spacing: 0.05em;
+transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+opacity 0.4s ease,
+box-shadow 0.3s ease;
+pointer-events: none;
+}
+.touch-blob.active { transform: translate(-50%, -50%) scale(1); }
+.touch-blob.frozen { pointer-events: none; }
+.touch-blob.frozen.active { transform: translate(-50%, -50%) scale(1); }
+
+.touch-blob.waiting {
+background: radial-gradient(circle at 35% 35%, #2a2a45, #16162a);
+border: 2px solid #3a3a58;
+color: #6666aa;
+box-shadow: 0 0 18px rgba(100,100,200,0.12);
+}
+
+.touch-blob.counting { animation: pulse-count 0.9s ease-in-out infinite; }
+@keyframes pulse-count {
+0%,100% { transform: translate(-50%,-50%) scale(1); }
+50%      { transform: translate(-50%,-50%) scale(1.07); }
+}
+
+.touch-blob.rank-first {
+border-width: 3px;
+border-color: var(–gold) !important;
+animation: winner-pulse 1s ease-in-out infinite;
+}
+@keyframes winner-pulse {
+0%,100% { transform: translate(-50%,-50%) scale(1.05); }
+50%      { transform: translate(-50%,-50%) scale(1.14); }
+}
+
+.touch-blob.rank-mid {
+transform: translate(-50%,-50%) scale(0.9) !important;
+transition: transform 0.4s ease, opacity 0.4s ease !important;
+opacity: 0.85;
+}
+
+.touch-blob.rank-last {
+opacity: 0.22 !important;
+transform: translate(-50%,-50%) scale(0.62) !important;
+transition: transform 0.5s ease, opacity 0.5s ease !important;
+}
+
+.blob-ordinal { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.blob-ordinal .num { font-size: 1.5rem; }
+.blob-ordinal .suf { font-size: 0.5rem; letter-spacing: 0.05em; margin-top: 1px; opacity: 0.85; }
+
+#countdown-ring {
+position: absolute;
+pointer-events: none;
+display: none;
+}
+#countdown-ring circle {
+fill: none;
+stroke: var(–accent);
+stroke-width: 3;
+stroke-linecap: round;
+transform-origin: center;
+transform: rotate(-90deg);
+filter: drop-shadow(0 0 6px var(–accent));
+}
+
+#result-banner {
+position: absolute;
+bottom: 0; left: 0; right: 0;
+padding: 14px 20px 22px;
+text-align: center;
+opacity: 0;
+transform: translateY(20px);
+transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+pointer-events: none;
+background: linear-gradient(to top, rgba(10,10,15,0.97) 65%, transparent);
+}
+#result-banner.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+#result-label {
+font-size: 0.72rem;
+text-transform: uppercase;
+letter-spacing: 0.15em;
+color: var(–muted);
+margin-bottom: 4px;
+}
+#result-text {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: clamp(1.6rem, 7vmin, 3rem);
+letter-spacing: 0.05em;
+color: var(–gold);
+text-shadow: 0 0 28px rgba(255,195,64,0.5);
+}
+
+#turn-order-list {
+display: none;
+flex-wrap: wrap;
+justify-content: center;
+gap: 5px;
+margin: 5px 0 6px;
+}
+#turn-order-list.visible { display: flex; }
+.turn-item {
+border-radius: 8px;
+padding: 3px 10px;
+font-size: 0.76rem;
+display: flex;
+align-items: center;
+gap: 6px;
+border: 1px solid rgba(255,255,255,0.08);
+background: rgba(0,0,0,0.3);
+}
+.turn-dot {
+width: 9px; height: 9px;
+border-radius: 50%;
+flex-shrink: 0;
+}
+.turn-pos {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 0.9rem;
+color: var(–gold);
+letter-spacing: 0.04em;
+min-width: 22px;
+}
+.turn-name { color: #bbb; }
+
+#dismiss-bar-wrap {
+margin-top: 10px;
+height: 2px;
+background: #1a1a28;
+border-radius: 2px;
+overflow: hidden;
+display: none;
+}
+#dismiss-bar-wrap.visible { display: block; }
+#dismiss-bar {
+height: 100%;
+width: 100%;
+background: var(–muted);
+transform-origin: left;
+transform: scaleX(1);
+}
+
+#reset-btn {
+margin-top: 10px;
+display: none;
+background: rgba(255,255,255,0.06);
+border: 1px solid #333348;
+color: var(–muted);
+font-family: ‘DM Sans’, sans-serif;
+font-size: 0.72rem;
+font-weight: 500;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+padding: 7px 20px;
+border-radius: 20px;
+cursor: pointer;
+transition: all 0.2s;
+}
+#reset-btn.visible { display: inline-block; }
+#reset-btn:hover { color: var(–text); border-color: #555; }
+
+.particle {
+position: absolute;
+width: 6px; height: 6px;
+border-radius: 50%;
+pointer-events: none;
+animation: burst 0.9s ease-out forwards;
+}
+@keyframes burst {
+0%   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+100% { transform: translate(calc(-50% + var(–dx)), calc(-50% + var(–dy))) scale(0); opacity: 0; }
+}
+</style>
+
+</head>
+<body>
+
+<div id="header">
+  <h1>Who Goes First</h1>
+  <button class="pill-btn" id="sort-btn">Turn Order</button>
+  <button class="pill-btn" id="mode-btn">Teams</button>
+</div>
+
+<div id="sub-config">
+  <label>Teams:</label>
+  <input id="team-count-input" type="number" value="2" min="2" max="5">
+</div>
+
+<div id="arena">
+  <div id="prompt">
+    <div id="prompt-main">Touch &amp; Hold</div>
+    <div id="prompt-sub">Everyone place a finger</div>
+  </div>
+  <svg id="countdown-ring" width="110" height="110" viewBox="0 0 110 110">
+    <circle cx="55" cy="55" r="50" stroke-dasharray="314" stroke-dashoffset="0"/>
+  </svg>
+  <div id="result-banner">
+    <div id="result-label">Goes First</div>
+    <div id="turn-order-list"></div>
+    <div id="result-text">&#8212;</div>
+    <div id="dismiss-bar-wrap"><div id="dismiss-bar"></div></div>
+    <button id="reset-btn">&#8629; Play Again</button>
+  </div>
+</div>
+
+<script>
+  const arena          = document.getElementById('arena');
+  const prompt         = document.getElementById('prompt');
+  const promptMain     = document.getElementById('prompt-main');
+  const promptSub      = document.getElementById('prompt-sub');
+  const resultBanner   = document.getElementById('result-banner');
+  const resultLabel    = document.getElementById('result-label');
+  const resultText     = document.getElementById('result-text');
+  const turnOrderList  = document.getElementById('turn-order-list');
+  const modeBtn        = document.getElementById('mode-btn');
+  const sortBtn        = document.getElementById('sort-btn');
+  const subConfig      = document.getElementById('sub-config');
+  const teamCountInput = document.getElementById('team-count-input');
+  const ring           = document.getElementById('countdown-ring');
+  const ringCircle     = ring.querySelector('circle');
+  const dismissBarWrap = document.getElementById('dismiss-bar-wrap');
+  const dismissBar     = document.getElementById('dismiss-bar');
+  const resetBtn       = document.getElementById('reset-btn');
+
+  let touches       = {};
+  let frozenBlobs   = [];
+  let state         = 'waiting';
+  let countdownTimer   = null;
+  let countdownStart   = null;
+  let dismissTimer     = null;
+  const COUNTDOWN_MS = 3000;
+  const DISMISS_MS   = 10000;
+
+  let teamsMode = false;
+  let sortMode  = false;
+
+  const PLAYER_COLORS = [
+    { top: '#e03030', bot: '#8a1010', border: '#ff6060', text: '#fff', glow: '255,60,60',   name: 'Red'    },
+    { top: '#2277ff', bot: '#0d3daa', border: '#66aaff', text: '#fff', glow: '60,130,255',  name: 'Blue'   },
+    { top: '#22cc55', bot: '#0d7a30', border: '#66ee88', text: '#fff', glow: '50,210,100',  name: 'Green'  },
+    { top: '#ee9900', bot: '#994400', border: '#ffcc44', text: '#fff', glow: '240,160,20',  name: 'Orange' },
+    { top: '#cc44ee', bot: '#771199', border: '#ee88ff', text: '#fff', glow: '200,80,240',  name: 'Purple' },
+    { top: '#00cccc', bot: '#006677', border: '#44eeff', text: '#fff', glow: '20,210,220',  name: 'Cyan'   },
+    { top: '#ff44aa', bot: '#991155', border: '#ff88cc', text: '#fff', glow: '255,80,180',  name: 'Pink'   },
+    { top: '#aacc00', bot: '#556600', border: '#ddff44', text: '#111', glow: '180,220,0',   name: 'Lime'   },
+  ];
+
+  const TEAM_COLORS = PLAYER_COLORS.slice(0, 5);
+  const TEAM_NAMES  = TEAM_COLORS.map(c => c.name);
+
+  const ORD_SUF = ['st','nd','rd','th','th','th','th','th','th','th'];
+  function ordSuf(n) { return ORD_SUF[n - 1] || 'th'; }
+
+  function applyColor(el, colorDef) {
+    el.style.background  = 'radial-gradient(circle at 35% 35%, ' + colorDef.top + ', ' + colorDef.bot + ')';
+    el.style.borderColor = colorDef.border;
+    el.style.color       = colorDef.text;
+    el.style.boxShadow   = '0 0 22px rgba(' + colorDef.glow + ',0.35)';
+  }
+
+  sortBtn.addEventListener('click', () => {
+    sortMode = !sortMode;
+    sortBtn.classList.toggle('active', sortMode);
+    resetAll();
+  });
+
+  modeBtn.addEventListener('click', () => {
+    teamsMode = !teamsMode;
+    modeBtn.classList.toggle('active', teamsMode);
+    subConfig.classList.toggle('visible', teamsMode);
+    resetAll();
+  });
+
+  resetBtn.addEventListener('click', () => resetAll());
+
+  function getTeamCount() {
+    return Math.max(2, Math.min(5, parseInt(teamCountInput.value) || 2));
+  }
+
+  let nextColorIndex = 0;
+
+  function createBlob(id, x, y) {
+    const el = document.createElement('div');
+    el.className = 'touch-blob waiting active';
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    el.textContent = '?';
+
+    const colorIdx = nextColorIndex % PLAYER_COLORS.length;
+    nextColorIndex++;
+    applyColor(el, PLAYER_COLORS[colorIdx]);
+    el.style.borderWidth = '2px';
+    el.style.borderStyle = 'solid';
+
+    arena.appendChild(el);
+    requestAnimationFrame(() => {});
+    touches[id] = { x, y, el, colorIdx };
+  }
+
+  function removeBlob(id) {
+    if (!touches[id]) return;
+    const el = touches[id].el;
+    if (!el.classList.contains('frozen')) {
+      el.style.transform = 'translate(-50%,-50%) scale(0)';
+      setTimeout(() => el.remove(), 200);
+    }
+    delete touches[id];
+  }
+
+  function getTouchCount() { return Object.keys(touches).length; }
+
+  function updatePrompt() {
+    if (state === 'result') return;
+    const n = getTouchCount();
+    if (n === 0) {
+      promptMain.textContent = 'Touch & Hold';
+      promptSub.textContent  = 'Everyone place a finger';
+      prompt.style.opacity   = '1';
+    } else if (n === 1) {
+      promptMain.textContent = 'Keep Going';
+      promptSub.textContent  = '1 finger detected';
+      prompt.style.opacity   = '1';
+    } else {
+      prompt.style.opacity = '0';
+    }
+  }
+
+  function startCountdown() {
+    if (state !== 'waiting') return;
+    state = 'countdown';
+    prompt.style.opacity = '0';
+
+    const rect = arena.getBoundingClientRect();
+    ring.style.display = 'block';
+    ring.style.left = (rect.width  / 2 - 55) + 'px';
+    ring.style.top  = (rect.height / 2 - 55) + 'px';
+    ringCircle.style.strokeDashoffset = '0';
+
+    Object.values(touches).forEach(t => t.el.classList.add('counting'));
+
+    countdownStart = performance.now();
+    function tick(now) {
+      if (state !== 'countdown') return;
+      const progress = Math.min((now - countdownStart) / COUNTDOWN_MS, 1);
+      ringCircle.style.strokeDashoffset = (314 * (1 - progress)).toString();
+      if (progress < 1) {
+        countdownTimer = requestAnimationFrame(tick);
+      } else {
+        pickResult();
+      }
+    }
+    countdownTimer = requestAnimationFrame(tick);
+  }
+
+  function cancelCountdown() {
+    if (countdownTimer) cancelAnimationFrame(countdownTimer);
+    countdownTimer = null;
+    state = 'waiting';
+    ring.style.display = 'none';
+    Object.values(touches).forEach(t => t.el.classList.remove('counting'));
+    updatePrompt();
+  }
+
+  function pickResult() {
+    state = 'result';
+    ring.style.display = 'none';
+
+    const ids = Object.keys(touches);
+    if (ids.length === 0) { resetAll(); return; }
+
+    ids.forEach(id => {
+      const el = touches[id].el;
+      el.classList.add('frozen');
+      frozenBlobs.push(el);
+    });
+
+    teamsMode ? pickTeams(ids) : pickSolo(ids);
+
+    resultBanner.classList.add('visible');
+    resetBtn.classList.add('visible');
+    startDismissTimer();
+  }
+
+  function startDismissTimer() {
+    dismissBarWrap.classList.add('visible');
+    dismissBar.style.transition = 'none';
+    dismissBar.style.transform  = 'scaleX(1)';
+    dismissBar.getBoundingClientRect();
+    dismissBar.style.transition = 'transform ' + DISMISS_MS + 'ms linear';
+    dismissBar.style.transform  = 'scaleX(0)';
+    dismissTimer = setTimeout(() => resetAll(), DISMISS_MS);
+  }
+
+  function cancelDismissTimer() {
+    if (dismissTimer) clearTimeout(dismissTimer);
+    dismissTimer = null;
+    dismissBar.style.transition = 'none';
+    dismissBar.style.transform  = 'scaleX(0)';
+    dismissBarWrap.classList.remove('visible');
+  }
+
+  function pickSolo(ids) {
+    const shuffled = [...ids].sort(() => Math.random() - 0.5);
+
+    if (!sortMode) {
+      ids.forEach(id => {
+        const el = touches[id].el;
+        el.classList.remove('counting', 'waiting');
+        if (id === shuffled[0]) {
+          el.classList.add('rank-first');
+          el.innerHTML = '&#9733;';
+          const c = PLAYER_COLORS[touches[id].colorIdx];
+          el.style.boxShadow = '0 0 50px rgba(' + c.glow + ',0.7), 0 0 100px rgba(' + c.glow + ',0.25)';
+          spawnParticles(touches[id].x, touches[id].y, c.glow);
+        } else {
+          el.classList.add('rank-last');
+        }
+      });
+      const winColor = PLAYER_COLORS[touches[shuffled[0]].colorIdx];
+      resultLabel.textContent     = 'Goes First';
+      resultText.textContent      = winColor.name;
+      resultText.style.color      = winColor.border;
+      resultText.style.textShadow = '0 0 28px rgba(' + winColor.glow + ',0.6)';
+      turnOrderList.classList.remove('visible');
+
+    } else {
+      shuffled.forEach((id, i) => {
+        const rank = i + 1;
+        const el   = touches[id].el;
+        el.classList.remove('counting', 'waiting');
+        if (rank === 1) {
+          el.classList.add('rank-first');
+          const c = PLAYER_COLORS[touches[id].colorIdx];
+          el.style.boxShadow = '0 0 50px rgba(' + c.glow + ',0.7), 0 0 100px rgba(' + c.glow + ',0.25)';
+          spawnParticles(touches[id].x, touches[id].y, c.glow);
+        } else if (rank === shuffled.length) {
+          el.classList.add('rank-last');
+        } else {
+          el.classList.add('rank-mid');
+        }
+        el.innerHTML = '<div class="blob-ordinal"><span class="num">' + rank + '</span><span class="suf">' + ordSuf(rank) + '</span></div>';
+      });
+
+      resultLabel.textContent     = 'Turn Order';
+      resultText.textContent      = '';
+      resultText.style.color      = '';
+      resultText.style.textShadow = '';
+      turnOrderList.innerHTML     = '';
+
+      shuffled.forEach((id, i) => {
+        const rank = i + 1;
+        const c    = PLAYER_COLORS[touches[id].colorIdx];
+        const item = document.createElement('div');
+        item.className = 'turn-item';
+        item.innerHTML =
+          '<span class="turn-dot" style="background:' + c.top + '; box-shadow:0 0 6px rgba(' + c.glow + ',0.5)"></span>' +
+          '<span class="turn-pos">' + rank + ordSuf(rank) + '</span>' +
+          '<span class="turn-name" style="color:' + c.border + '">' + c.name + '</span>';
+        turnOrderList.appendChild(item);
+      });
+      turnOrderList.classList.add('visible');
+    }
+  }
+
+  function pickTeams(ids) {
+    const numTeams = getTeamCount();
+    const shuffled = [...ids].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach((id, i) => {
+      const teamIdx = i % numTeams;
+      const el = touches[id].el;
+      el.classList.remove('counting', 'waiting');
+      applyColor(el, TEAM_COLORS[teamIdx]);
+      el.style.borderWidth = '2px';
+      el.style.borderStyle = 'solid';
+      el.textContent = TEAM_NAMES[teamIdx][0];
+    });
+
+    if (!sortMode) {
+      resultLabel.textContent = 'Teams Assigned';
+      const counts = Array.from({length: numTeams}, function(_, i) {
+        return TEAM_NAMES[i] + ': ' + shuffled.filter(function(_,j){ return j % numTeams === i; }).length;
+      });
+      resultText.textContent = counts.join(' · ');
+      resultText.style.color = '';
+      turnOrderList.classList.remove('visible');
+
+    } else {
+      const teamOrder = Array.from({length: numTeams}, function(_,i){ return i; })
+                             .sort(() => Math.random() - 0.5);
+
+      resultLabel.textContent = 'Team Turn Order';
+      resultText.textContent  = '';
+      resultText.style.color  = '';
+      turnOrderList.innerHTML = '';
+
+      teamOrder.forEach((teamIdx, pos) => {
+        const rank = pos + 1;
+        const c    = TEAM_COLORS[teamIdx];
+        const item = document.createElement('div');
+        item.className = 'turn-item';
+        item.innerHTML =
+          '<span class="turn-dot" style="background:' + c.top + '; box-shadow:0 0 6px rgba(' + c.glow + ',0.5)"></span>' +
+          '<span class="turn-pos">' + rank + ordSuf(rank) + '</span>' +
+          '<span class="turn-name" style="color:' + c.border + '">' + c.name + '</span>';
+        turnOrderList.appendChild(item);
+      });
+      turnOrderList.classList.add('visible');
+
+      const winTeam = teamOrder[0];
+      shuffled.forEach((id, i) => {
+        if (i % numTeams === winTeam) {
+          touches[id].el.classList.add('rank-first');
+          const c = TEAM_COLORS[winTeam];
+          touches[id].el.style.boxShadow = '0 0 50px rgba(' + c.glow + ',0.7)';
+          spawnParticles(touches[id].x, touches[id].y, c.glow);
+        }
+      });
+    }
+  }
+
+  function spawnParticles(x, y, glowRgb) {
+    const colors = ['rgb(' + glowRgb + ')', '#ffffff', '#ffc340'];
+    for (let i = 0; i < 16; i++) {
+      const p     = document.createElement('div');
+      p.className = 'particle';
+      const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.3;
+      const dist  = 50 + Math.random() * 70;
+      p.style.left = x + 'px';
+      p.style.top  = y + 'px';
+      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      arena.appendChild(p);
+      setTimeout(() => p.remove(), 1000);
+    }
+  }
+
+  function resetAll() {
+    cancelDismissTimer();
+    if (countdownTimer) cancelAnimationFrame(countdownTimer);
+    countdownTimer = null;
+    state = 'waiting';
+    nextColorIndex = 0;
+    ring.style.display = 'none';
+    resultBanner.classList.remove('visible');
+    turnOrderList.classList.remove('visible');
+    resetBtn.classList.remove('visible');
+    resultText.style.color      = '';
+    resultText.style.textShadow = '';
+
+    Object.keys(touches).forEach(id => {
+      const el = touches[id].el;
+      if (!el.classList.contains('frozen')) {
+        el.style.transform = 'translate(-50%,-50%) scale(0)';
+        setTimeout(() => el.remove(), 200);
+      }
+    });
+    touches = {};
+
+    frozenBlobs.forEach(el => {
+      el.style.transform = 'translate(-50%,-50%) scale(0)';
+      el.style.opacity   = '0';
+      setTimeout(() => el.remove(), 300);
+    });
+    frozenBlobs = [];
+
+    prompt.style.opacity   = '1';
+    promptMain.textContent = 'Touch & Hold';
+    promptSub.textContent  = 'Everyone place a finger';
+  }
+
+  arena.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (state === 'result') { resetAll(); return; }
+
+    const rect = arena.getBoundingClientRect();
+    Array.from(e.changedTouches).forEach(t => {
+      createBlob(t.identifier, t.clientX - rect.left, t.clientY - rect.top);
+    });
+
+    updatePrompt();
+    if (getTouchCount() >= 2 && state === 'waiting') startCountdown();
+  }, { passive: false });
+
+  arena.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (state === 'result') return;
+    const rect = arena.getBoundingClientRect();
+    Array.from(e.changedTouches).forEach(t => {
+      if (touches[t.identifier]) {
+        const td = touches[t.identifier];
+        td.x = t.clientX - rect.left;
+        td.y = t.clientY - rect.top;
+        td.el.style.left = td.x + 'px';
+        td.el.style.top  = td.y + 'px';
+      }
+    });
+  }, { passive: false });
+
+  arena.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (state === 'result') return;
+    Array.from(e.changedTouches).forEach(t => removeBlob(t.identifier));
+    if (state === 'countdown') cancelCountdown();
+    updatePrompt();
+  }, { passive: false });
+
+  arena.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    if (state === 'result') return;
+    Array.from(e.changedTouches).forEach(t => removeBlob(t.identifier));
+    if (state === 'countdown') cancelCountdown();
+    updatePrompt();
+  }, { passive: false });
+</script>
+
+</body>
+</html>
