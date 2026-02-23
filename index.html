@@ -8,20 +8,20 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
 
-- { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 :root {
-–bg: #0a0a0f;
-–surface: #13131a;
-–accent: #ff4d00;
-–gold: #ffc340;
-–text: #f0ede8;
-–muted: #555568;
+--bg: #0a0a0f;
+--surface: #13131a;
+--accent: #ff4d00;
+--gold: #ffc340;
+--text: #f0ede8;
+--muted: #555568;
 }
 
 body {
-background: var(–bg);
-color: var(–text);
+background: var(--bg);
+color: var(--text);
 font-family: ‘DM Sans’, sans-serif;
 height: 100dvh;
 overflow: hidden;
@@ -57,8 +57,14 @@ transition: opacity 0.2s ease;
 font-family: ‘Bebas Neue’, sans-serif;
 font-size: clamp(3rem, 18vmin, 7rem);
 letter-spacing: 0.08em;
+color: #000;
+text-shadow: 0 0 40px rgba(0,0,0,0.3);
+}
+@media (prefers-color-scheme: dark) {
+#added-label {
 color: #fff;
 text-shadow: 0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,195,64,0.3);
+}
 }
 
 #header {
@@ -73,14 +79,14 @@ h1 {
 font-family: ‘Bebas Neue’, sans-serif;
 font-size: 1.8rem;
 letter-spacing: 0.08em;
-color: var(–text);
+color: var(--text);
 margin-right: auto;
 }
 
 .pill-btn {
-background: var(–surface);
+background: var(--surface);
 border: 1px solid #2a2a38;
-color: var(–muted);
+color: var(--muted);
 font-family: ‘DM Sans’, sans-serif;
 font-size: 0.72rem;
 font-weight: 500;
@@ -92,11 +98,11 @@ cursor: pointer;
 transition: all 0.2s;
 white-space: nowrap;
 }
-.pill-btn:hover { color: var(–text); border-color: #444; }
+.pill-btn:hover { color: var(--text); border-color: #444; }
 .pill-btn.active {
 background: #1e1020;
-border-color: var(–accent);
-color: var(–accent);
+border-color: var(--accent);
+color: var(--accent);
 }
 
 #sub-config {
@@ -110,11 +116,11 @@ overflow: hidden;
 transition: max-height 0.3s ease, padding 0.3s ease;
 }
 #sub-config.visible { max-height: 50px; padding-bottom: 8px; }
-#sub-config label { font-size: 0.78rem; color: var(–muted); text-transform: uppercase; letter-spacing: 0.06em; }
+#sub-config label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 #team-count-input {
-background: var(–surface);
+background: var(--surface);
 border: 1px solid #2a2a38;
-color: var(–text);
+color: var(--text);
 font-family: ‘DM Sans’, sans-serif;
 font-size: 0.85rem;
 padding: 5px 10px;
@@ -155,7 +161,7 @@ font-family: ‘Bebas Neue’, sans-serif;
 font-size: clamp(2rem, 9vmin, 4.5rem);
 letter-spacing: 0.05em;
 line-height: 1;
-color: var(–muted);
+color: var(--muted);
 }
 #prompt-sub {
 font-size: 0.78rem;
@@ -173,7 +179,7 @@ transform: translateX(-50%);
 font-family: ‘Bebas Neue’, sans-serif;
 font-size: 1rem;
 letter-spacing: 0.1em;
-color: var(–muted);
+color: var(--muted);
 opacity: 0;
 transition: opacity 0.3s;
 pointer-events: none;
@@ -209,7 +215,7 @@ pointer-events: none;
 
 .touch-blob.rank-first {
 border-width: 3px !important;
-border-color: var(–gold) !important;
+border-color: var(--gold) !important;
 animation: winner-pulse 1s ease-in-out infinite;
 }
 @keyframes winner-pulse {
@@ -244,12 +250,12 @@ stroke-width: 4;
 }
 #inactivity-ring circle.prog {
 fill: none;
-stroke: var(–accent);
+stroke: var(--accent);
 stroke-width: 4;
 stroke-linecap: round;
 transform-origin: center;
 transform: rotate(-90deg);
-filter: drop-shadow(0 0 5px var(–accent));
+filter: drop-shadow(0 0 5px var(--accent));
 }
 
 #countdown-ring {
@@ -259,12 +265,12 @@ display: none;
 }
 #countdown-ring circle {
 fill: none;
-stroke: var(–accent);
+stroke: var(--accent);
 stroke-width: 3;
 stroke-linecap: round;
 transform-origin: center;
 transform: rotate(-90deg);
-filter: drop-shadow(0 0 6px var(–accent));
+filter: drop-shadow(0 0 6px var(--accent));
 }
 
 #result-banner {
@@ -284,14 +290,14 @@ background: linear-gradient(to top, rgba(10,10,15,0.97) 65%, transparent);
 font-size: 0.72rem;
 text-transform: uppercase;
 letter-spacing: 0.15em;
-color: var(–muted);
+color: var(--muted);
 margin-bottom: 4px;
 }
 #result-text {
 font-family: ‘Bebas Neue’, sans-serif;
 font-size: clamp(1.6rem, 7vmin, 3rem);
 letter-spacing: 0.05em;
-color: var(–gold);
+color: var(--gold);
 text-shadow: 0 0 28px rgba(255,195,64,0.5);
 }
 
@@ -317,7 +323,7 @@ background: rgba(0,0,0,0.3);
 .turn-pos {
 font-family: ‘Bebas Neue’, sans-serif;
 font-size: 0.9rem;
-color: var(–gold);
+color: var(--gold);
 letter-spacing: 0.04em;
 min-width: 22px;
 }
@@ -335,7 +341,7 @@ display: none;
 #dismiss-bar {
 height: 100%;
 width: 100%;
-background: var(–muted);
+background: var(--muted);
 transform-origin: left;
 transform: scaleX(1);
 }
@@ -345,7 +351,7 @@ margin-top: 10px;
 display: none;
 background: rgba(255,255,255,0.06);
 border: 1px solid #333348;
-color: var(–muted);
+color: var(--muted);
 font-family: ‘DM Sans’, sans-serif;
 font-size: 0.72rem;
 font-weight: 500;
@@ -357,7 +363,7 @@ cursor: pointer;
 transition: all 0.2s;
 }
 #reset-btn.visible { display: inline-block; }
-#reset-btn:hover { color: var(–text); border-color: #555; }
+#reset-btn:hover { color: var(--text); border-color: #555; }
 
 .particle {
 position: absolute;
@@ -368,7 +374,7 @@ animation: burst 0.9s ease-out forwards;
 }
 @keyframes burst {
 0%   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
-100% { transform: translate(calc(-50% + var(–dx)), calc(-50% + var(–dy))) scale(0); opacity: 0; }
+100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0); opacity: 0; }
 }
 </style>
 
