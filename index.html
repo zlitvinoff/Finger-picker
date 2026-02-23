@@ -279,6 +279,32 @@ pointer-events: none;
 background: linear-gradient(to top, rgba(10,10,15,0.97) 65%, transparent);
 }
 #result-banner.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+#result-banner.teams-overlay {
+top: 0;
+background: rgba(10,10,15,0.97);
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+padding: 32px 24px 28px;
+overflow-y: auto;
+-webkit-overflow-scrolling: touch;
+}
+#result-banner.teams-overlay #turn-order-list {
+width: 100%;
+max-width: 360px;
+}
+#result-banner.teams-overlay .team-row {
+padding: 10px 14px;
+}
+#result-banner.teams-overlay .team-member-dot {
+width: 26px;
+height: 26px;
+}
+#result-banner.teams-overlay #result-label {
+font-size: 0.85rem;
+margin-bottom: 8px;
+}
 
 #result-label {
 font-size: 0.72rem;
@@ -297,12 +323,19 @@ text-shadow: 0 0 28px rgba(255,195,64,0.5);
 
 #turn-order-list {
 display: none;
-flex-wrap: wrap;
-justify-content: center;
-gap: 5px;
+flex-direction: column;
+align-items: stretch;
+gap: 4px;
 margin: 5px 0 6px;
+width: 100%;
 }
 #turn-order-list.visible { display: flex; }
+#turn-order-list:not(.teams-mode) {
+flex-direction: row;
+flex-wrap: wrap;
+justify-content: center;
+align-items: center;
+}
 .turn-item {
 border-radius: 8px;
 padding: 3px 10px;
@@ -322,6 +355,40 @@ letter-spacing: 0.04em;
 min-width: 22px;
 }
 .turn-name { color: #bbb; }
+
+.team-row {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 4px 10px;
+border: 1px solid rgba(255,255,255,0.08);
+background: rgba(0,0,0,0.3);
+border-radius: 8px;
+width: 100%;
+}
+.team-label {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 0.95rem;
+letter-spacing: 0.07em;
+color: var(--text);
+min-width: 70px;
+display: flex;
+align-items: center;
+gap: 5px;
+}
+.team-dots {
+display: flex;
+flex-wrap: wrap;
+gap: 5px;
+flex: 1;
+}
+.team-member-dot {
+width: 18px;
+height: 18px;
+border-radius: 50%;
+display: inline-block;
+flex-shrink: 0;
+}
 
 #dismiss-bar-wrap {
 margin-top: 10px;
@@ -692,48 +759,73 @@ function buildResultBanner(playerData) {
     }
   } else {
     var numTeams = getTeamCount();
+    // Assign team index to each player (shuffle so assignment is random)
     for (i = 0; i < playerData.length; i++) {
       playerData[i].teamIdx = i % numTeams;
       if (playerData[i].el) {
-        applyColor(playerData[i].el, TEAM_COLORS[playerData[i].teamIdx]);
         playerData[i].el.classList.remove('rank-first','rank-mid','rank-last','counting');
-        playerData[i].el.textContent = TEAM_COLORS[playerData[i].teamIdx].name[0];
+        // Keep original player color on blob - team shown in banner only
       }
     }
-    if (!sortMode) {
-      resultLabel.textContent = 'Teams Assigned';
-      var counts = [];
-      for (var t = 0; t < numTeams; t++) {
-        var cnt = 0;
-        for (i = 0; i < playerData.length; i++) { if (playerData[i].teamIdx === t) cnt++; }
-        counts.push(TEAM_COLORS[t].name+': '+cnt);
+
+    // Build team groups: teamGroups[t] = array of playerData entries on that team
+    var teamGroups = [];
+    for (var t = 0; t < numTeams; t++) teamGroups.push([]);
+    for (i = 0; i < playerData.length; i++) teamGroups[playerData[i].teamIdx].push(playerData[i]);
+
+    var teamOrder = [];
+    for (var t = 0; t < numTeams; t++) teamOrder.push(t);
+    if (sortMode) teamOrder.sort(function(){ return Math.random()-0.5; });
+
+    resultLabel.textContent = sortMode ? 'Team Turn Order' : 'Teams';
+    resultText.textContent  = '';
+    resultText.style.color  = '';
+    resultText.style.textShadow = '';
+    turnOrderList.innerHTML = '';
+
+    for (i = 0; i < teamOrder.length; i++) {
+      var tIdx    = teamOrder[i];
+      var members = teamGroups[tIdx];
+      var teamNum = i + 1;
+
+      var row = document.createElement('div');
+      row.className = 'team-row';
+
+      var label = document.createElement('div');
+      label.className = 'team-label';
+      label.innerHTML = sortMode
+        ? '<span class="turn-pos">' + teamNum + ordSuf(teamNum) + '</span> Team ' + (tIdx + 1)
+        : 'Team ' + (tIdx + 1);
+      row.appendChild(label);
+
+      var dots = document.createElement('div');
+      dots.className = 'team-dots';
+      for (var m = 0; m < members.length; m++) {
+        var pc = ALL_COLORS[members[m].colorIdx];
+        var dot = document.createElement('span');
+        dot.className = 'team-member-dot';
+        dot.style.background  = pc.top;
+        dot.style.boxShadow   = '0 0 6px rgba(' + pc.glow + ',0.6)';
+        dot.title = pc.name;
+        dots.appendChild(dot);
       }
-      resultText.textContent      = counts.join(' · ');
-      resultText.style.color      = '';
-      resultText.style.textShadow = '';
-      turnOrderList.classList.remove('visible');
-    } else {
-      var teamOrder = [];
-      for (var t = 0; t < numTeams; t++) teamOrder.push(t);
-      teamOrder.sort(function(){ return Math.random()-0.5; });
-      resultLabel.textContent = 'Team Turn Order';
-      resultText.textContent  = '';
-      resultText.style.color  = '';
-      turnOrderList.innerHTML = '';
-      for (i = 0; i < teamOrder.length; i++) {
-        rank = i + 1;
-        c    = TEAM_COLORS[teamOrder[i]];
-        item = document.createElement('div');
-        item.className = 'turn-item';
-        item.innerHTML = '<span class="turn-dot" style="background:'+c.top+';box-shadow:0 0 6px rgba('+c.glow+',0.5)"></span><span class="turn-pos">'+rank+ordSuf(rank)+'</span><span class="turn-name" style="color:'+c.border+'">'+c.name+'</span>';
-        turnOrderList.appendChild(item);
-      }
-      turnOrderList.classList.add('visible');
+      row.appendChild(dots);
+      turnOrderList.appendChild(row);
+    }
+    turnOrderList.classList.add('visible');
+    turnOrderList.classList.add('teams-mode');
+    resultBanner.classList.add('teams-overlay');
+    // Clear all blobs so the fullscreen overlay isn't obscured
+    clearLiveTouches();
+    clearFrozenBlobs();
+
+    // Highlight winning team blobs if sort mode
+    if (sortMode) {
       var winTeam = teamOrder[0];
       for (i = 0; i < playerData.length; i++) {
         if (playerData[i].teamIdx === winTeam && playerData[i].el) {
           playerData[i].el.classList.add('rank-first');
-          c = TEAM_COLORS[winTeam];
+          c = ALL_COLORS[playerData[i].colorIdx];
           playerData[i].el.style.boxShadow = '0 0 50px rgba('+c.glow+',0.7)';
           spawnParticles(playerData[i].x, playerData[i].y, c.glow);
         }
@@ -844,6 +936,8 @@ function resetAll() {
   ring.style.display = 'none';
   resultBanner.classList.remove('visible');
   turnOrderList.classList.remove('visible');
+  turnOrderList.classList.remove('teams-mode');
+  resultBanner.classList.remove('teams-overlay');
   resetBtn.classList.remove('visible');
   resultText.style.color      = '';
   resultText.style.textShadow = '';
@@ -872,7 +966,7 @@ arena.addEventListener('touchstart', function(e) {
   if (seqMode) {
     stopInactivityRing();
     if (registerTimer) { clearTimeout(registerTimer); registerTimer = null; }
-    // Reset the 1.5s "Added" debounce timer on every new finger
+    // Reset the 1.5s debounce on every new finger
     if (addedTimer) { clearTimeout(addedTimer); addedTimer = null; }
     hideAdded();
     for (var i = 0; i < ch.length; i++) {
@@ -881,10 +975,19 @@ arena.addEventListener('touchstart', function(e) {
     }
     state = 'seq-active';
     setPrompt('', '', false);
-    // Show "Added!" only after 1.5s of no new fingers arriving
+    // After 1.5s of no new or lifted fingers, snapshot whoever is still down
     addedTimer = setTimeout(function() {
       addedTimer = null;
-      if (state === 'seq-active') showAdded();
+      if (state !== 'seq-active') return;
+      // Register exactly who is still touching right now
+      var activeIds = Object.keys(touches);
+      for (var j = 0; j < activeIds.length; j++) {
+        var atd = touches[activeIds[j]];
+        seqPlayers.push({ colorIdx: atd.colorIdx, x: atd.x, y: atd.y });
+      }
+      updateSeqCount();
+      showAdded();
+      state = 'seq-waiting';
     }, ADDED_DELAY);
   } else {
     for (var i = 0; i < ch.length; i++) {
@@ -927,40 +1030,51 @@ arena.addEventListener('touchend', function(e) {
   var ch = e.changedTouches;
 
   if (seqMode) {
+    // Lift: remove blob, reset 1.5s debounce
     for (var i = 0; i < ch.length; i++) {
       var id = ch[i].identifier;
       if (!touches[id]) continue;
-      var td = touches[id];
-      seqPlayers.push({ colorIdx: td.colorIdx, x: td.x, y: td.y });
       removeBlob(id);
     }
-    updateSeqCount();
+    if (addedTimer) { clearTimeout(addedTimer); addedTimer = null; }
+    hideAdded();
 
-    if (getTouchCount() === 0) {
-      if (state === 'seq-active') {
-        // First lift after tapping: start register timer, Added is already showing
-        state = 'seq-waiting';
-        registerTimer = setTimeout(function() {
-          registerTimer = null;
-          hideAdded();
-          clearLiveTouches();
-          var n = seqPlayers.length;
-          setPrompt('Any more?', n + ' registered  \u2014  tap to add', true);
+    if (state === 'seq-active') {
+      if (getTouchCount() > 0) {
+        // Fingers still down after lift - restart 1.5s window
+        addedTimer = setTimeout(function() {
+          addedTimer = null;
+          if (state !== 'seq-active') return;
+          var activeIds = Object.keys(touches);
+          for (var j = 0; j < activeIds.length; j++) {
+            var atd = touches[activeIds[j]];
+            seqPlayers.push({ colorIdx: atd.colorIdx, x: atd.x, y: atd.y });
+          }
           updateSeqCount();
-          state = 'seq-idle';
-          // Start inactivity ring now - no more taps = show result
-          startInactivityRing(INACTIVITY_MS, function() {
-            if (seqPlayers.length >= 1) showSeqResult();
-            else resetAll();
-          });
-        }, REGISTER_MS);
-      } else if (state === 'seq-idle') {
-        // Subsequent round lifted - restart inactivity ring
+          showAdded();
+          state = 'seq-waiting';
+        }, ADDED_DELAY);
+      }
+      // If all lifted during seq-active, just wait - next touchstart restarts
+    } else if (state === 'seq-waiting' && getTouchCount() === 0) {
+      // All fingers lifted after Added showed - transition to Any more?
+      registerTimer = setTimeout(function() {
+        registerTimer = null;
+        hideAdded();
+        clearLiveTouches();
+        setPrompt('Any more?', seqPlayers.length + ' registered  —  tap to add', true);
+        updateSeqCount();
+        state = 'seq-idle';
         startInactivityRing(INACTIVITY_MS, function() {
           if (seqPlayers.length >= 1) showSeqResult();
           else resetAll();
         });
-      }
+      }, REGISTER_MS);
+    } else if (state === 'seq-idle') {
+      startInactivityRing(INACTIVITY_MS, function() {
+        if (seqPlayers.length >= 1) showSeqResult();
+        else resetAll();
+      });
     }
   } else {
     for (var i = 0; i < ch.length; i++) removeBlob(ch[i].identifier);
